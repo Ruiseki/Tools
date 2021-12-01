@@ -1,3 +1,4 @@
+#include <iostream>
 #include <fstream>
 #include <vector>
 #include <windows.h>
@@ -70,8 +71,12 @@ string getFieldName(char &letter, string &sectionName, ifstream &json)
 
 char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
 {
-    char letter, fileSize;
+    char letter;
     string fieldName("");
+    int currentPos = json.tellg();
+    json.seekg(0, ios::end);
+    int fileSize(json.tellg());
+    json.seekg(currentPos, ios::beg);
 
     do
     {
@@ -104,7 +109,15 @@ char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
             }
         }
         else if(letter == ']') return letter;
+
+        if(json.tellg() % 10000 == 0)
+        {
+            system("cls");
+            cout << "Progression : " << 100 * json.tellg() / fileSize << "%" << endl;
+            cout << json.tellg() << " / " << fileSize << endl;
+        }
     }while(letter != '}');
+    system("cls");
     return letter;
 }
 
@@ -114,6 +127,10 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
     string fieldName = "";
     string value = "";
     int fieldNumber;
+    int currentPos = json.tellg();
+    json.seekg(0, ios::end);
+    int fileSize(json.tellg());
+    json.seekg(currentPos, ios::beg);
 
     do
     {
@@ -160,7 +177,15 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
         }
         else if(letter == ']') return letter;
 
+        if(json.tellg() % 10000 == 0)
+        {
+            system("cls");
+            cout << "Progression : " << 100 * json.tellg() / fileSize << "%" << endl;
+            cout << json.tellg() << " / " << fileSize << endl;
+        }
+
     }while(letter != '}');
+    system("cls");
     return letter;
 }
 
