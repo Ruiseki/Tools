@@ -2,6 +2,7 @@
 #include <fstream>
 #include <vector>
 #include <windows.h>
+#include <chrono>
 using namespace std;
 
 bool isElementPresentInArray(string element,vector<string> array)
@@ -223,6 +224,7 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
 
 int main(int argc, char *argv[])
 {
+    auto start = chrono::system_clock::now();
     ifstream input;
 
     if(argc > 1) // check the input
@@ -278,21 +280,30 @@ int main(int argc, char *argv[])
 
     // determinate the columns
     vector<string> columns;
-    
+
     int fieldNumber = 0;
-    for(vector<string> field : fields)
+    for(int i(0); i < fields.size(); i++)
     {
-        for(string element : field)
+        for(string element : fields[i])
         {
             if(!isElementPresentInArray(element, columns))
             {
                 columns.push_back(element);
             }
         }
+        
+        if(i % 5000 == 0)
+        {
+            system("cls");
+            cout << "Determinating the columns : " << 100 * i / fields.size() << "%" << endl;
+        }
     }
 
     const int columnsSize(columns.size());
     string values[columnsSize];
+
+    system("cls");
+    cout << "Writing columns...";
 
     for(int i(0); i < columns.size(); i++) // first row
     {
@@ -327,7 +338,10 @@ int main(int argc, char *argv[])
     input.close();
     output.close();
 
+    auto end = chrono::system_clock::now();
+    chrono::duration<double> elapsed_time = end-start;
+
     system("cls");
-    cout << "Done.";
+    cout << "Done." << endl << "Executed in " << elapsed_time.count() << "s";
     return 0;
 }
