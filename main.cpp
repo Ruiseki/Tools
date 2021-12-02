@@ -35,7 +35,7 @@ void skipArray(ifstream &fileRead)
 
 string deleteSpaceAndBackspace(string &element)
 {
-    for(int i(element.size()); i >= 0; i--)
+    for(int i(element.size() - 1); i >= 0; i--)
     {
         if(element[i] == ' ' || element[i] == '\n')
         {
@@ -50,7 +50,7 @@ string deleteSpaceAndBackspace(string &element)
 string getFieldName(char &letter, string &sectionName, ifstream &json)
 {
     string fieldName;
-    if(sectionName != "") fieldName += sectionName+"/";
+    if(sectionName != "") fieldName += sectionName+"_";
     {
         do // get the field name
         {
@@ -74,6 +74,10 @@ char findFields(string sectionName, ifstream &json, vector<string> &fields)
     json.seekg(0, ios::end);
     int fileSize(json.tellg());
     json.seekg(currentPos, ios::beg);
+
+    int displayWhen;
+    if(fileSize > 1000) displayWhen = fileSize / 1000;
+    else displayWhen = 1;
 
     do
     {
@@ -117,14 +121,13 @@ char findFields(string sectionName, ifstream &json, vector<string> &fields)
         }
         else if(letter == ']') return letter;
 
-        if(json.tellg() % 10000 == 0)
+        if(json.tellg() % displayWhen == 0)
         {
-            /* system("cls");
-            cout << "Progression : " << 100 * json.tellg() / fileSize << "%" << endl;
-            cout << json.tellg() << " / " << fileSize << endl << endl; */
+            system("cls");
+            cout << "Reading : " << 100 * json.tellg() / fileSize << "%" << endl;
+            cout << json.tellg() << " / " << fileSize << endl << endl;
         }
     }while(letter != '}');
-    // system("cls");
     return letter;
 }
 
@@ -138,6 +141,10 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
     json.seekg(0, ios::end);
     int fileSize(json.tellg());
     json.seekg(currentPos, ios::beg);
+
+    int displayWhen;
+    if(fileSize > 1000) displayWhen = fileSize / 1000;
+    else displayWhen = 1;
 
     do
     {
@@ -163,6 +170,7 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
             if(letter == '{') // in this case, this is an object in an object.
             {
                 letter = writedata(ref, fieldName, json, csv, values);
+                json.get(letter);
             }
             else if(letter == '[') // array. Need to be skiped.
             {
@@ -202,41 +210,63 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
         }
         else if(letter == ']') return letter;
 
-        if(json.tellg() % 10000 == 0)
+        if(json.tellg() % displayWhen == 0)
         {
-            /* system("cls");
+            system("cls");
             cout << "Writing : " << 100 * json.tellg() / fileSize << "%" << endl;
-            cout << json.tellg() << " / " << fileSize << endl << endl; */
+            cout << json.tellg() << " / " << fileSize << endl << endl;
         }
 
     }while(letter != '}');
-    // system("cls");
     return letter;
 }
 
-int main(int agrc, char *argv[])
+int main(int argc, char *argv[])
 {
-    try
+    ifstream input;
+
+    if(argc > 1) // check the input
     {
-        argv[1];
+        input.open(argv[1]);
     }
-    catch(exception err)
+    else
     {
+        cout << "No input file.";
         return -1;
     }
-
-    ifstream input(argv[1]);
-    ofstream output;
-    vector<vector<string>> fields;
-    
-    input.seekg(ios::beg);
 
     if(!input)
     {
-        cout << "file doesn't exist";
+        cout << "file doesn't exist (" << argv[1] << ")";
         return -1;
     }
 
+    input.seekg(ios::beg);
+
+    ofstream output;
+
+    string outputpath;
+    if(argc > 2) // check the output
+    {
+        outputpath = argv[2];
+    }
+    else
+    {
+        outputpath = "./result.csv";
+    }
+
+    output.open(outputpath.c_str());
+
+    if(!output)
+    {
+        cout << "Impossible d'ecrire dans le fichiers cible. (" << outputpath << ")";
+        return -1;
+    }
+
+    // COLUMNS
+
+    vector<vector<string>> fields;
+    
     char endingChar;
     do // get all fields of the file for detecting the columns
     {
@@ -264,18 +294,6 @@ int main(int agrc, char *argv[])
     const int columnsSize(columns.size());
     string values[columnsSize];
 
-    string outputpath;
-    try // check the argument for output file
-    {
-        outputpath = argv[2];
-    }
-    catch(exception err)
-    {
-        outputpath = "./file.csv";
-    }
-
-    output.open(outputpath.c_str());
-
     for(int i(0); i < columns.size(); i++) // first row
     {
         output << columns[i];
@@ -283,23 +301,33 @@ int main(int agrc, char *argv[])
         else output << ',';
     }
 
+    // MAKING THE CSV
+
     input.seekg(0, ios::beg);
 
-    do // get all fields of the file for detecting the one that had the more option
+    do
     {
         for(string element : values) element = ""; // clear the array
         endingChar = writedata(columns, "", input, output, values); // fill the array with values
         for(int i(0); i < columnsSize; i++) // write the values
         {
-            /* if(values[i] != "") output << values[i];
-            else output << "null"; */
             output << values[i];
             if(i == columnsSize - 1) output << '\n';
             else output << ',';
         }
-        if(endingChar == '}') input.seekg(1, ios::cur);
+        if(endingChar == '}')
+        { // get the next character that is not a space or a backspace
+            do
+            {
+                input.get(endingChar);
+            }while(endingChar == ' ' || endingChar == '\n' || endingChar == '\0');
+        }
     }while(endingChar != ']');
 
+    input.close();
     output.close();
+
+    system("cls");
+    cout << "Done.";
     return 0;
 }
