@@ -4,10 +4,6 @@
 #include <windows.h>
 using namespace std;
 
-
-// IL MANQUE PARFOIS DES CHAMPS.
-// VERIFIER ET METTRE AUCUNE VALEUR SI JAMAIS
-
 bool isElementPresentInArray(string element,vector<string> array)
 {
     for(string x : array)
@@ -45,6 +41,7 @@ string deleteSpaceAndBackspace(string &element)
         {
             element.pop_back();
         }
+        else break;
     }
 
     return element;
@@ -69,7 +66,7 @@ string getFieldName(char &letter, string &sectionName, ifstream &json)
     return fieldName;
 }
 
-char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
+char findFields(string sectionName, ifstream &json, vector<string> &fields)
 {
     char letter;
     string fieldName("");
@@ -80,7 +77,9 @@ char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
 
     do
     {
-        letter = rEmptSpc(json);
+        if(currentPos != fileSize) letter = rEmptSpc(json);
+        else return ']';
+        int getPos = json.tellg();
 
         if(letter == '"')
         {
@@ -89,7 +88,7 @@ char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
             if(letter == '{') // in this case, this is an object in an object.
             {
                 vector<string> temp;
-                letter = newFindFields(fieldName, json, temp);
+                letter = findFields(fieldName, json, temp);
                 for(string element : temp) fields.push_back(element);
             }
             else if(letter == '[') // array. Need to be skiped.
@@ -97,8 +96,16 @@ char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
                 skipArray(json);
                 fields.push_back(fieldName);
             }
-            else // we must go the end of the value.
+            else // we must go the end of the value.    
             {
+                if(letter == '"') // if the value is in double-quote
+                {
+                    do // moving to the next ',' or '}'
+                    {
+                        json.get(letter);
+                    }while(letter != '"');
+                }
+
                 do // moving to the next ',' or '}'
                 {
                     json.get(letter);
@@ -112,12 +119,12 @@ char newFindFields(string sectionName, ifstream &json, vector<string> &fields)
 
         if(json.tellg() % 10000 == 0)
         {
-            system("cls");
+            /* system("cls");
             cout << "Progression : " << 100 * json.tellg() / fileSize << "%" << endl;
-            cout << json.tellg() << " / " << fileSize << endl;
+            cout << json.tellg() << " / " << fileSize << endl << endl; */
         }
     }while(letter != '}');
-    system("cls");
+    // system("cls");
     return letter;
 }
 
@@ -134,7 +141,8 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
 
     do
     {
-        letter = rEmptSpc(json);
+        if(currentPos != fileSize) letter = rEmptSpc(json);
+        else return ']';
 
         if(letter == '"')
         {
@@ -161,13 +169,30 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
                 skipArray(json);
                 values[fieldNumber] = "[]";
             }
-            else // we must go the end of the value.
+            else // saving the value
             {
-                do
+                if(letter == '"') // if the value is in double-quote
                 {
                     value += letter;
-                    json.get(letter);
-                }while(letter != ',' && letter != '}');
+                    do // moving to the next '"'
+                    {
+                        json.get(letter);
+                        value += letter;
+                    }while(letter != '"');
+
+                    do // moving the the next ',' or '}' without saving the value
+                    {
+                        json.get(letter);
+                    }while(letter != ',' && letter != '}');
+                }
+                else
+                {
+                    do 
+                    {
+                        value += letter;
+                        json.get(letter);
+                    }while(letter != ',' && letter != '}');
+                }
 
                 deleteSpaceAndBackspace(value);
                 values[fieldNumber] = value;
@@ -179,13 +204,13 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
 
         if(json.tellg() % 10000 == 0)
         {
-            system("cls");
-            cout << "Progression : " << 100 * json.tellg() / fileSize << "%" << endl;
-            cout << json.tellg() << " / " << fileSize << endl;
+            /* system("cls");
+            cout << "Writing : " << 100 * json.tellg() / fileSize << "%" << endl;
+            cout << json.tellg() << " / " << fileSize << endl << endl; */
         }
 
     }while(letter != '}');
-    system("cls");
+    // system("cls");
     return letter;
 }
 
@@ -206,11 +231,17 @@ int main(int agrc, char *argv[])
     
     input.seekg(ios::beg);
 
+    if(!input)
+    {
+        cout << "file doesn't exist";
+        return -1;
+    }
+
     char endingChar;
     do // get all fields of the file for detecting the columns
     {
         vector<string> tempFields;
-        endingChar = newFindFields("", input, tempFields);
+        endingChar = findFields("", input, tempFields);
         fields.push_back(tempFields);
         if(endingChar == '}') input.seekg(1, ios::cur);
     }while(endingChar != ']');
@@ -218,6 +249,7 @@ int main(int agrc, char *argv[])
     // determinate the columns
     vector<string> columns;
     
+    int fieldNumber = 0;
     for(vector<string> field : fields)
     {
         for(string element : field)
@@ -259,8 +291,9 @@ int main(int agrc, char *argv[])
         endingChar = writedata(columns, "", input, output, values); // fill the array with values
         for(int i(0); i < columnsSize; i++) // write the values
         {
-            if(values[i] != "") output << values[i];
-            else output << "null";
+            /* if(values[i] != "") output << values[i];
+            else output << "null"; */
+            output << values[i];
             if(i == columnsSize - 1) output << '\n';
             else output << ',';
         }
