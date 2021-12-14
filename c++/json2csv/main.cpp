@@ -24,13 +24,13 @@ char rEmptSpc(ifstream &fileRead) // skip the empty space
     return a;
 }
 
-void skipArray(ifstream &fileRead)
+void arrayMgr(ifstream &fileRead)
 {
     char a;
     do
     {
         fileRead.get(a);
-        if(a == '[') skipArray(fileRead);
+        if(a == '[') arrayMgr(fileRead);
     }while(a != ']');
 }
 
@@ -98,7 +98,7 @@ char findFields(string sectionName, ifstream &json, vector<string> &fields)
             }
             else if(letter == '[') // array. Need to be skiped.
             {
-                skipArray(json);
+                arrayMgr(json);
                 fields.push_back(fieldName);
             }
             else // we must go the end of the value.    
@@ -175,7 +175,7 @@ char writedata(vector<string> &ref, string sectionName, ifstream &json, ofstream
             }
             else if(letter == '[') // array. Need to be skiped.
             {
-                skipArray(json);
+                arrayMgr(json);
                 values[fieldNumber] = "[]";
             }
             else // saving the value
@@ -254,7 +254,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        outputpath = "./result.csv";
+        outputpath = "./mainResult.csv";
     }
 
     output.open(outputpath.c_str());

@@ -137,6 +137,7 @@ public class Program
 
             // check the type
             bool isInt = true, isDouble = true;
+
             for(int j=0; j < allArgs.Count; j++)
             {
                 string element = allArgs[j][i];
@@ -230,7 +231,7 @@ public class Program
             command.ExecuteNonQuery();
         }
     }
-    
+
     private static string connString = "";
     private static string[] typeOfColumns;
 
